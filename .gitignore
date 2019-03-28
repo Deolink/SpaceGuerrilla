@@ -75,3 +75,7 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+UnrealProject/SpaceGuerrilla/Content/Spaceship/FBX_Spaceship/texture/falena_Normal.uasset
+UnrealProject/SpaceGuerrilla/Content/Spaceship/FBX_Spaceship/texture/falena_Emissive.uasset
+UnrealProject/SpaceGuerrilla/Content/Spaceship/FBX_Spaceship/texture/falena_BaseColor.uasset
+UnrealProject/SpaceGuerrilla/Content/Spaceship/FBX_Spaceship/texture/falena_OcclusionRoughnessMetallic.uasset

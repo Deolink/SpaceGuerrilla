@@ -124,7 +124,9 @@ FSpaceshipMove ASpaceship::CreateMove(float DeltaTime)
 	Move.PitchRotationRatio = PitchRotationRatio;
 	Move.RollRotationRatio = RollRotationRatio;
 	Move.YawRotationRatio = YawRotationRatio;
-	Move.Time = GetWorld()->TimeSeconds;
+	AGameStateBase* GameState = GetWorld()->GetGameState();
+
+	Move.Time = GameState->GetServerWorldTimeSeconds();
 	return Move;
 }
 

@@ -12,6 +12,30 @@ struct FSpaceshipMove
 	GENERATED_USTRUCT_BODY()
 
 	UPROPERTY()
+	float Throttle;
+
+	UPROPERTY()
+	float PitchRotationRatio;
+
+	UPROPERTY()
+	float YawRotationRatio;
+
+	UPROPERTY()
+	float RollRotationRatio;
+
+	UPROPERTY()
+	float DeltaTime;
+
+	UPROPERTY()
+	float Time;
+};
+
+USTRUCT()
+struct FSpaceshipState
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
 	float CurrentYawSpeed;
 
 	UPROPERTY()
@@ -30,19 +54,7 @@ struct FSpaceshipMove
 	float CurrentForwardSpeed;
 
 	UPROPERTY()
-	float DeltaTime;
-
-	UPROPERTY()
-	float Time;
-};
-
-USTRUCT()
-struct FSpaceshipState
-{
-	GENERATED_USTRUCT_BODY()
-
-	UPROPERTY()
-	FTransform Tranform;
+	FTransform Transform;
 
 	UPROPERTY()
 	FSpaceshipMove LastMove;
@@ -67,9 +79,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;	
 
 	FVector2D MovementInput;
 	FVector2D CameraInput;
@@ -82,24 +92,27 @@ public:
 	void PitchCamera(float Val);
 	void YawCamera(float Val);
 
-
-
 	//Server input implementation
 	//Input functions trasferiti in controller
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_MoveForwardInput(float Val);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_MoveYawInput(float Val);
+	void Server_SendMove(FSpaceshipMove Move);
+
+
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//void Server_MoveForwardInput(float Val);
+
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//void Server_MoveYawInput(float Val);
 	
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_PitchCamera(float Val);
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//void Server_PitchCamera(float Val);
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_YawCamera(float Val);
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//void Server_YawCamera(float Val);
 
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float PitchValue;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float PitchValue;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float YawValue;
@@ -124,6 +137,7 @@ public:
 
 	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
 	float CameraMaxPitch;
+
 	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
 	float CameraMinPitch;
 
@@ -135,24 +149,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	FVector MuzzleOffset;
 
-	// Replicated variables for the server
-	UPROPERTY(Replicated)
-	float CurrentYawSpeed;
 
-	UPROPERTY(Replicated)
-	float CurrentPitchSpeed;
-
-	UPROPERTY(Replicated)
-	float CurrentRollSpeed;
-
-	UPROPERTY(Replicated)
-	float CurrentStrafeSpeed;
-
-	UPROPERTY(Replicated)
-	float RollRoll;
-
-	UPROPERTY(Replicated)
+	// ServerState
+	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
+	FSpaceshipState ServerState;
+		
+	float CurrentYawSpeed;	
+	float CurrentPitchSpeed;	
+	float CurrentRollSpeed;	
+	float CurrentStrafeSpeed;	
+	float RollRoll;	
 	float CurrentForwardSpeed;
+
+	// Replicated variables for the server
 
 	UPROPERTY(Replicated)
 	float Throttle;
@@ -166,13 +175,7 @@ public:
 	UPROPERTY(Replicated)
 	float RollRotationRatio;
 
-	UPROPERTY(ReplicatedUsing = OnRep_ReplicatedTransform)
-	FTransform ReplicatedTransform;
-
 	// Function to call when replicated transform changes
 	UFUNCTION()
-	void OnRep_ReplicatedTransform();
-
-	
-
+	void OnRep_ServerState();
 };

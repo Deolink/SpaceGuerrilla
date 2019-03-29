@@ -9,7 +9,6 @@
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
 
-
 // Sets default values
 ASpaceship::ASpaceship()
 {
@@ -38,13 +37,8 @@ void ASpaceship::BeginPlay()
 void ASpaceship::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ASpaceship, ReplicatedTransform);
-	DOREPLIFETIME(ASpaceship, CurrentYawSpeed);
-	DOREPLIFETIME(ASpaceship, CurrentPitchSpeed);
-	DOREPLIFETIME(ASpaceship, CurrentRollSpeed);
-	DOREPLIFETIME(ASpaceship, CurrentStrafeSpeed);
-	DOREPLIFETIME(ASpaceship, RollRoll);
-	DOREPLIFETIME(ASpaceship, CurrentForwardSpeed); 
+	DOREPLIFETIME(ASpaceship, ServerState);
+
 	DOREPLIFETIME(ASpaceship, Throttle);
 	DOREPLIFETIME(ASpaceship, PitchRotationRatio);
 	DOREPLIFETIME(ASpaceship, YawRotationRatio);
@@ -73,6 +67,22 @@ FString GetEnumText(ENetRole Role)
 void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	FSpaceshipMove Move;
+
+
+	if (IsLocallyControlled())
+	{
+		Move.DeltaTime = DeltaTime;
+		Move.Throttle = Throttle;
+		Move.PitchRotationRatio = PitchRotationRatio;
+		Move.RollRotationRatio = RollRotationRatio;
+		Move.YawRotationRatio = YawRotationRatio;
+		// TODO Set Time
+
+		Server_SendMove(Move);
+	}
+	
 
 	FRotator Banana = GetActorRotation();// Debug console
 	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
@@ -139,7 +149,14 @@ void ASpaceship::Tick(float DeltaTime)
 	// Check if we are the server or the client, so we make sure the replicated variables are the same
 	if (HasAuthority())
 	{
-		ReplicatedTransform = GetActorTransform();
+		ServerState.Transform = GetActorTransform();
+		ServerState.CurrentForwardSpeed = CurrentForwardSpeed;
+		ServerState.CurrentPitchSpeed = CurrentPitchSpeed;
+		ServerState.CurrentRollSpeed = CurrentRollSpeed;
+		ServerState.CurrentStrafeSpeed = CurrentStrafeSpeed;
+		ServerState.CurrentYawSpeed = CurrentYawSpeed;
+		ServerState.RollRoll = RollRoll;
+		// TODO Update last move
 	}
 
 	// Getting the Role and showing it above the actor
@@ -147,11 +164,16 @@ void ASpaceship::Tick(float DeltaTime)
 }
 
 // Replicated function called when the variable replicated changes
-void ASpaceship::OnRep_ReplicatedTransform()
+void ASpaceship::OnRep_ServerState()
 {
-	SetActorTransform(ReplicatedTransform);
+	SetActorTransform(ServerState.Transform);
+	CurrentForwardSpeed = ServerState.CurrentForwardSpeed;
+	CurrentPitchSpeed = ServerState.CurrentPitchSpeed;
+	CurrentRollSpeed = ServerState.CurrentRollSpeed;
+	CurrentStrafeSpeed = ServerState.CurrentStrafeSpeed;
+	CurrentYawSpeed = ServerState.CurrentYawSpeed;
+	RollRoll = ServerState.RollRoll;
 }
-
 
 // Called to bind functionality to input
 void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -171,40 +193,42 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 void ASpaceship::MoveForwardInput(float Val)
 {
 	Throttle = Val;
-	
-	Server_MoveForwardInput(Val);
 }
 
 void ASpaceship::MoveYawInput(float Val)
 {
 	RollRotationRatio = Val;
-	
-
-	Server_MoveYawInput(Val);
 }
 
 void ASpaceship::PitchCamera(float Val)
 {
 	PitchRotationRatio = Val;
 	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, PitchRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-
-	Server_PitchCamera(Val);
 }
 
 void ASpaceship::YawCamera(float Val)
 {
 	YawRotationRatio = Val;
 	CameraInput.X = FMath::FInterpTo(CameraInput.X, YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-	
-	Server_YawCamera(Val);
+
 }
 
 // Movement Server Implementation and validation. Validation is for anticheat
-void ASpaceship::Server_MoveForwardInput_Implementation(float Val)
+void ASpaceship::Server_SendMove_Implementation(FSpaceshipMove Move)
 {
-	Throttle = Val;
+	Throttle = Move.Throttle;
+	PitchRotationRatio = Move.PitchRotationRatio;
+	YawRotationRatio = Move.YawRotationRatio;
+	RollRotationRatio = Move.RollRotationRatio;
 }
 
+bool ASpaceship::Server_SendMove_Validate(FSpaceshipMove Move)
+{
+	return true; //TODO make better validation
+}
+
+
+/*
 bool ASpaceship::Server_MoveForwardInput_Validate(float Val)
 {
 	return true;
@@ -239,4 +263,4 @@ bool ASpaceship::Server_YawCamera_Validate(float Val)
 {
 	return true;
 }
-
+*/

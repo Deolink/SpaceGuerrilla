@@ -75,6 +75,8 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
+
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -98,6 +100,7 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FSpaceshipMove Move);
 
+	void SimulateMove(FSpaceshipMove Move);
 
 	//UFUNCTION(Server, Reliable, WithValidation)
 	//void Server_MoveForwardInput(float Val);
@@ -153,26 +156,19 @@ public:
 	// ServerState
 	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
 	FSpaceshipState ServerState;
-		
+	
+
+	// Now these are all variables of the clients, We replicate them in the structs
 	float CurrentYawSpeed;	
 	float CurrentPitchSpeed;	
 	float CurrentRollSpeed;	
 	float CurrentStrafeSpeed;	
 	float RollRoll;	
-	float CurrentForwardSpeed;
-
-	// Replicated variables for the server
-
-	UPROPERTY(Replicated)
-	float Throttle;
-	
-	UPROPERTY(Replicated)
-	float PitchRotationRatio;
-
-	UPROPERTY(Replicated)
-	float YawRotationRatio;
-
-	UPROPERTY(Replicated)
+	float CurrentForwardSpeed;	
+	//
+	float Throttle;	
+	float PitchRotationRatio;	
+	float YawRotationRatio;	
 	float RollRotationRatio;
 
 	// Function to call when replicated transform changes

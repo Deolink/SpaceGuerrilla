@@ -64,19 +64,26 @@ void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsLocallyControlled())
+
+	if (Role == ROLE_AutonomousProxy)
 	{
 		FSpaceshipMove Move = CreateMove(DeltaTime);
+		SimulateMove(Move);
 
-		if (!HasAuthority()) 
-		{
-			UnacknowledgeMoves.Add(Move);
-			UE_LOG(LogTemp, Warning, TEXT("Queue lenght: %d"), UnacknowledgeMoves.Num()); // Debug console
-		}		
-
+		UnacknowledgeMoves.Add(Move);
 		Server_SendMove(Move);
+	}
 
-		SimulateMove(Move);// need to fix later
+	// we are the server and in control of the pawn
+	if (Role == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy)
+	{
+		FSpaceshipMove Move = CreateMove(DeltaTime);
+		Server_SendMove(Move);
+	}
+
+	if (Role == ROLE_SimulatedProxy)
+	{
+		SimulateMove(ServerState.LastMove);
 	}
 
 	FRotator Banana = GetActorRotation();// Debug console

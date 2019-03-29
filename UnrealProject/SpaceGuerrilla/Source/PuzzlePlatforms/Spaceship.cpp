@@ -8,6 +8,7 @@
 #include "Engine.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
+#include "GameFramework/GameStateBase.h"
 
 // Sets default values
 ASpaceship::ASpaceship()
@@ -63,30 +64,25 @@ void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FSpaceshipMove Move;
-
-
 	if (IsLocallyControlled())
 	{
-		Move.DeltaTime = DeltaTime;
-		Move.Throttle = Throttle;
-		Move.PitchRotationRatio = PitchRotationRatio;
-		Move.RollRotationRatio = RollRotationRatio;
-		Move.YawRotationRatio = YawRotationRatio;
-		// TODO Set Time
+		FSpaceshipMove Move = CreateMove(DeltaTime);
+
+		if (!HasAuthority) 
+		{
+			UnacknowledgeMoves.Add(Move);
+			UE_LOG(LogTemp, Warning, TEXT("Queue lenght: %d"), UnacknowledgeMoves.Num()); // Debug console
+		}		
 
 		Server_SendMove(Move);
 
 		SimulateMove(Move);// need to fix later
 	}
-	
 
 	FRotator Banana = GetActorRotation();// Debug console
 	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
 
 	UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());// Debug console
-
-	
 
 	// Getting the Role and showing it above the actor
 	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumText(Role), this, FColor::White, DeltaTime);
@@ -116,6 +112,20 @@ void ASpaceship::OnRep_ServerState()
 	CurrentStrafeSpeed = ServerState.CurrentStrafeSpeed;
 	CurrentYawSpeed = ServerState.CurrentYawSpeed;
 	RollRoll = ServerState.RollRoll;
+
+	ClearAcknowledgeMoves(ServerState.LastMove);
+}
+
+FSpaceshipMove ASpaceship::CreateMove(float DeltaTime)
+{
+	FSpaceshipMove Move;
+	Move.DeltaTime = DeltaTime;
+	Move.Throttle = Throttle;
+	Move.PitchRotationRatio = PitchRotationRatio;
+	Move.RollRotationRatio = RollRotationRatio;
+	Move.YawRotationRatio = YawRotationRatio;
+	Move.Time = GetWorld()->TimeSeconds;
+	return Move;
 }
 
 void ASpaceship::SimulateMove(FSpaceshipMove Move)
@@ -176,6 +186,21 @@ void ASpaceship::SimulateMove(FSpaceshipMove Move)
 
 		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());// Debug console
 	}
+}
+
+void ASpaceship::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
+{
+	TArray<FSpaceshipMove> NewMoves;
+
+	for (const FSpaceshipMove& Move : UnacknowledgeMoves)
+	{
+		if (Move.Time > LastMove.Time)
+		{
+			NewMoves.Add(Move);
+		}
+	}
+
+	UnacknowledgeMoves = NewMoves;
 }
 
 // Movement on client

@@ -100,7 +100,11 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FSpaceshipMove Move);
 
+	FSpaceshipMove CreateMove(float DeltaTime);
+
 	void SimulateMove(FSpaceshipMove Move);
+
+	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
 
 	//UFUNCTION(Server, Reliable, WithValidation)
 	//void Server_MoveForwardInput(float Val);
@@ -170,6 +174,8 @@ public:
 	float PitchRotationRatio;	
 	float YawRotationRatio;	
 	float RollRotationRatio;
+
+	TArray<FSpaceshipMove> UnacknowledgeMoves;
 
 	// Function to call when replicated transform changes
 	UFUNCTION()

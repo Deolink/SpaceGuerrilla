@@ -68,7 +68,7 @@ void ASpaceship::Tick(float DeltaTime)
 	{
 		FSpaceshipMove Move = CreateMove(DeltaTime);
 
-		if (!HasAuthority) 
+		if (!HasAuthority()) 
 		{
 			UnacknowledgeMoves.Add(Move);
 			UE_LOG(LogTemp, Warning, TEXT("Queue lenght: %d"), UnacknowledgeMoves.Num()); // Debug console

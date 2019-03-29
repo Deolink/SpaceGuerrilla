@@ -6,6 +6,49 @@
 #include "GameFramework/Pawn.h"
 #include "Spaceship.generated.h"
 
+USTRUCT()
+struct FSpaceshipMove
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	float CurrentYawSpeed;
+
+	UPROPERTY()
+	float CurrentPitchSpeed;
+
+	UPROPERTY()
+	float CurrentRollSpeed;
+
+	UPROPERTY()
+	float CurrentStrafeSpeed;
+
+	UPROPERTY()
+	float RollRoll;
+
+	UPROPERTY()
+	float CurrentForwardSpeed;
+
+	UPROPERTY()
+	float DeltaTime;
+
+	UPROPERTY()
+	float Time;
+};
+
+USTRUCT()
+struct FSpaceshipState
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	FTransform Tranform;
+
+	UPROPERTY()
+	FSpaceshipMove LastMove;
+};
+
+
 UCLASS()
 class PUZZLEPLATFORMS_API ASpaceship : public APawn
 {
@@ -110,11 +153,26 @@ public:
 
 	UPROPERTY(Replicated)
 	float CurrentForwardSpeed;
+
+	UPROPERTY(Replicated)
+	float Throttle;
 	
+	UPROPERTY(Replicated)
+	float PitchRotationRatio;
+
+	UPROPERTY(Replicated)
+	float YawRotationRatio;
+
+	UPROPERTY(Replicated)
+	float RollRotationRatio;
+
 	UPROPERTY(ReplicatedUsing = OnRep_ReplicatedTransform)
 	FTransform ReplicatedTransform;
 
+	// Function to call when replicated transform changes
 	UFUNCTION()
 	void OnRep_ReplicatedTransform();
+
+	
 
 };

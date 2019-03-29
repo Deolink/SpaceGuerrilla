@@ -44,7 +44,11 @@ void ASpaceship::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLif
 	DOREPLIFETIME(ASpaceship, CurrentRollSpeed);
 	DOREPLIFETIME(ASpaceship, CurrentStrafeSpeed);
 	DOREPLIFETIME(ASpaceship, RollRoll);
-	DOREPLIFETIME(ASpaceship, CurrentForwardSpeed);
+	DOREPLIFETIME(ASpaceship, CurrentForwardSpeed); 
+	DOREPLIFETIME(ASpaceship, Throttle);
+	DOREPLIFETIME(ASpaceship, PitchRotationRatio);
+	DOREPLIFETIME(ASpaceship, YawRotationRatio);
+	DOREPLIFETIME(ASpaceship, RollRotationRatio);
 }
 
 //Function to get the role in string to debug
@@ -70,47 +74,67 @@ void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FRotator Banana = GetActorRotation();
-	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString());
-	//UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *NewRotation.ToString());
+	FRotator Banana = GetActorRotation();// Debug console
+	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
 
-//	FRotator NewRotation = OurCameraSpringArm->GetComponentRotation();
-//	NewRotation.Yaw = (CameraInput.X * DeltaTime);
-//	NewRotation.Pitch = (CameraInput.Y * DeltaTime);
-//	OurCameraSpringArm->SetWorldRotation(FQuat(NewRotation), true);
+	UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());// Debug console
 
-	//TODO Refactoring the code in small functions so it's easier to implement in the server
-	UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());
+	// TODO Refactoring
 	// Move forward tick
 	{
+		bool bHasInput = !FMath::IsNearlyEqual(Throttle, 0.f);
+		float CurrentAcc = bHasInput ? (Throttle * Acceleration) : (-0.2f * Acceleration);
+		float NewForwardSpeed = CurrentForwardSpeed + (GetWorld()->GetDeltaSeconds() * CurrentAcc);
+		CurrentForwardSpeed = FMath::Clamp(NewForwardSpeed, MinSpeed, MaxSpeed);
 		const FVector LocalMove = FVector(CurrentForwardSpeed * DeltaTime, 0.f, 0.f);
 
 		// Move plan forwards (with sweep so we stop when we collide with things)
 		AddActorLocalOffset(LocalMove, true);
 	}
+	// Rotation Pitch tick
 	{
+		CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, PitchRotationRatio * TurnSpeed*0.5, GetWorld()->GetDeltaSeconds(), 1.f);  // PitchRotationRatio * TurnSpeed;
+
 		FRotator rotationDelta(CurrentPitchSpeed *DeltaTime, 0, 0);
 
 		FTransform NewTrasform = GetTransform();
 		NewTrasform.ConcatenateRotation(rotationDelta.Quaternion());
 		NewTrasform.NormalizeRotation();
 		SetActorTransform(NewTrasform);
-
+	}
+	// Rotation Yaw Tick
+	{
+		float Rotation = GetActorRotation().Roll;
+		bool bIsTurning = (FMath::Abs(YawRotationRatio) > 0.2f) && (FMath::IsWithin(Rotation, -90.f, 90.f));
+		if (bIsTurning)
+		{
+			CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);//TurnSpeed * Val;
+		}
+		else
+		{
+			CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, GetActorRotation().Roll * -1.f, GetWorld()->GetDeltaSeconds(), 5.f);//GetActorRotation().Roll * -0.5;
+		}		
+		CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f); //Val*TurnSpeed;
+		
 		// Calculate change in rotation this frame
 		FRotator DeltaRotation(0, 0, 0);
 		DeltaRotation.Yaw = CurrentYawSpeed * DeltaTime;
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotation.ToString());
+
+		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotation.ToString());// Debug console
 
 		// Rotate plane
 		AddActorWorldRotation(FQuat(DeltaRotation), true);
 	}
+
+	// Rotation Roll Tick
 	{
+		RollRoll = FMath::FInterpTo(RollRoll, RollRotationRatio * TurnSpeed * 3, GetWorld()->GetDeltaSeconds(), 1.f);
 		FRotator DeltaRotationRoll(0, 0, 0);
 		DeltaRotationRoll.Roll = (CurrentRollSpeed + RollRoll * 2)* DeltaTime;
 		AddActorLocalRotation(FQuat(DeltaRotationRoll), true);
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());
-	}
 
+		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());// Debug console
+	}
 
 	// Check if we are the server or the client, so we make sure the replicated variables are the same
 	if (HasAuthority())
@@ -136,8 +160,6 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	// Respond every frame to the values our movements.
 	PlayerInputComponent->BindAxis("ForwardSpaceship", this, &ASpaceship::MoveForwardInput);
 	PlayerInputComponent->BindAxis("YawSpaceship", this, &ASpaceship::MoveYawInput);
-	//PlayerInputComponent->BindAxis("Strafe", this, &ACorpo::MoveStrafeInput);
-	//PlayerInputComponent->BindAction("Boost", this, &ACorpo::BoostInput);
 	InputComponent->BindAxis("CameraPitchSpaceship", this, &ASpaceship::PitchCamera);
 	InputComponent->BindAxis("CameraYawSpaceship", this, &ASpaceship::YawCamera);
 
@@ -148,65 +170,39 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 // Movement on client
 void ASpaceship::MoveForwardInput(float Val)
 {
-	bool bHasInput = !FMath::IsNearlyEqual(Val, 0.f);
-	float CurrentAcc = bHasInput ? (Val * Acceleration) : (-0.2f * Acceleration);
-	float NewForwardSpeed = CurrentForwardSpeed + (GetWorld()->GetDeltaSeconds() * CurrentAcc);
-	CurrentForwardSpeed = FMath::Clamp(NewForwardSpeed, MinSpeed, MaxSpeed);
-	const FRotator Rotation = GetActorRotation();
-	const FRotator YawRotation(0, Rotation.Yaw, 0);
-	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	AddMovementInput(Direction, CurrentForwardSpeed);
-
-
+	Throttle = Val;
+	
 	Server_MoveForwardInput(Val);
 }
 
 void ASpaceship::MoveYawInput(float Val)
 {
-	RollRoll = FMath::FInterpTo(RollRoll, Val * TurnSpeed * 3, GetWorld()->GetDeltaSeconds(), 1.f);
+	RollRotationRatio = Val;
+	
 
 	Server_MoveYawInput(Val);
 }
 
 void ASpaceship::PitchCamera(float Val)
 {
-	float Rotation = GetActorRotation().Pitch;
-	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-	CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, Val * TurnSpeed*0.5, GetWorld()->GetDeltaSeconds(), 1.f);  // Val * TurnSpeed;
+	PitchRotationRatio = Val;
+	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, PitchRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
 
 	Server_PitchCamera(Val);
 }
 
 void ASpaceship::YawCamera(float Val)
 {
-
-	CameraInput.X = FMath::FInterpTo(CameraInput.X, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-	float Rotation = GetActorRotation().Roll;
-	bool bIsTurning = (FMath::Abs(Val) > 0.2f) && (FMath::IsWithin(Rotation, -90.f, 90.f));
-	if (bIsTurning)
-	{
-		CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);//TurnSpeed * Val;
-	}
-	else
-	{
-		CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, GetActorRotation().Roll * -1.f, GetWorld()->GetDeltaSeconds(), 5.f);//GetActorRotation().Roll * -0.5;
-	}
-	CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f); //Val*TurnSpeed;
-
+	YawRotationRatio = Val;
+	CameraInput.X = FMath::FInterpTo(CameraInput.X, YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
+	
 	Server_YawCamera(Val);
 }
 
 // Movement Server Implementation and validation. Validation is for anticheat
 void ASpaceship::Server_MoveForwardInput_Implementation(float Val)
 {
-	bool bHasInput = !FMath::IsNearlyEqual(Val, 0.f);
-	float CurrentAcc = bHasInput ? (Val * Acceleration) : (-0.2f * Acceleration);
-	float NewForwardSpeed = CurrentForwardSpeed + (GetWorld()->GetDeltaSeconds() * CurrentAcc);
-	CurrentForwardSpeed = FMath::Clamp(NewForwardSpeed, MinSpeed, MaxSpeed);
-	const FRotator Rotation = GetActorRotation();
-	const FRotator YawRotation(0, Rotation.Yaw, 0);
-	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	AddMovementInput(Direction, CurrentForwardSpeed);
+	Throttle = Val;
 }
 
 bool ASpaceship::Server_MoveForwardInput_Validate(float Val)
@@ -216,8 +212,7 @@ bool ASpaceship::Server_MoveForwardInput_Validate(float Val)
 
 void ASpaceship::Server_MoveYawInput_Implementation(float Val)
 {
-	RollRoll = FMath::FInterpTo(RollRoll, Val * TurnSpeed * 3, GetWorld()->GetDeltaSeconds(), 1.f);
-
+	RollRotationRatio = Val;
 }
 
 bool ASpaceship::Server_MoveYawInput_Validate(float Val)
@@ -227,10 +222,7 @@ bool ASpaceship::Server_MoveYawInput_Validate(float Val)
 
 void ASpaceship::Server_PitchCamera_Implementation(float Val)
 {
-	float Rotation = GetActorRotation().Pitch;
-	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-	CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, Val * TurnSpeed*0.5, GetWorld()->GetDeltaSeconds(), 1.f);  // Val * TurnSpeed;
-
+	PitchRotationRatio = Val;
 }
 
 bool ASpaceship::Server_PitchCamera_Validate(float Val)
@@ -240,18 +232,7 @@ bool ASpaceship::Server_PitchCamera_Validate(float Val)
 
 void ASpaceship::Server_YawCamera_Implementation(float Val)
 {
-	CameraInput.X = FMath::FInterpTo(CameraInput.X, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
-	float Rotation = GetActorRotation().Roll;
-	bool bIsTurning = (FMath::Abs(Val) > 0.2f) && (FMath::IsWithin(Rotation, -90.f, 90.f));
-	if (bIsTurning)
-	{
-		CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);//TurnSpeed * Val;
-	}
-	else
-	{
-		CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, GetActorRotation().Roll * -1.f, GetWorld()->GetDeltaSeconds(), 5.f);//GetActorRotation().Roll * -0.5;
-	}
-	CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, Val * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f); //Val*TurnSpeed;
+	YawRotationRatio = Val;	
 }
 
 bool ASpaceship::Server_YawCamera_Validate(float Val)

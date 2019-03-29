@@ -114,6 +114,11 @@ void ASpaceship::OnRep_ServerState()
 	RollRoll = ServerState.RollRoll;
 
 	ClearAcknowledgeMoves(ServerState.LastMove);
+
+	for (const FSpaceshipMove& Move : UnacknowledgeMoves)
+	{
+		SimulateMove(Move);
+	}
 }
 
 FSpaceshipMove ASpaceship::CreateMove(float DeltaTime)
@@ -130,7 +135,7 @@ FSpaceshipMove ASpaceship::CreateMove(float DeltaTime)
 	return Move;
 }
 
-void ASpaceship::SimulateMove(FSpaceshipMove Move)
+void ASpaceship::SimulateMove(const FSpaceshipMove& Move)
 {
 	// TODO Refactoring
 	// Move forward tick

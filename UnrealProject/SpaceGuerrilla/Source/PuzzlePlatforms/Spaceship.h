@@ -102,7 +102,7 @@ public:
 
 	FSpaceshipMove CreateMove(float DeltaTime);
 
-	void SimulateMove(FSpaceshipMove Move);
+	void SimulateMove(const FSpaceshipMove& Move);
 
 	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
 

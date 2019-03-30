@@ -4,31 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "SpaceshipMovementComponent.h"
 #include "Spaceship.generated.h"
 
-USTRUCT()
-struct FSpaceshipMove
-{
-	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
-	float Throttle;
-
-	UPROPERTY()
-	float PitchRotationRatio;
-
-	UPROPERTY()
-	float YawRotationRatio;
-
-	UPROPERTY()
-	float RollRotationRatio;
-
-	UPROPERTY()
-	float DeltaTime;
-
-	UPROPERTY()
-	float Time;
-};
 
 USTRUCT()
 struct FSpaceshipState
@@ -100,10 +79,6 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FSpaceshipMove Move);
 
-	FSpaceshipMove CreateMove(float DeltaTime);
-
-	void SimulateMove(const FSpaceshipMove& Move);
-
 	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
 
 	//UFUNCTION(Server, Reliable, WithValidation)
@@ -128,56 +103,23 @@ public:
 	float RollValue;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
-	float Acceleration;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float TurnSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float MaxSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float MinSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
 	float Boost;
-
-	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
-	float CameraMaxPitch;
-
-	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
-	float CameraMinPitch;
-
-	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
-	float CameraMaxYaw;
-	UPROPERTY(Category = Camera, BlueprintReadWrite, EditAnywhere)
-	float CameraMinYaw;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	FVector MuzzleOffset;
 
-
 	// ServerState
 	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
 	FSpaceshipState ServerState;
-	
-
-	// Now these are all variables of the clients, We replicate them in the structs
-	float CurrentYawSpeed;	
-	float CurrentPitchSpeed;	
-	float CurrentRollSpeed;	
-	float CurrentStrafeSpeed;	
-	float RollRoll;	
-	float CurrentForwardSpeed;	
-	//
-	float Throttle;	
-	float PitchRotationRatio;	
-	float YawRotationRatio;	
-	float RollRotationRatio;
 
 	TArray<FSpaceshipMove> UnacknowledgeMoves;
+
+	// Components
+	UPROPERTY(EditAnywhere)
+	USpaceshipMovementComponent* MovementComponent;
 
 	// Function to call when replicated transform changes
 	UFUNCTION()
 	void OnRep_ServerState();
+	
 };

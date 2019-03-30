@@ -1,14 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Spaceship.h"
-#include "Camera/CameraComponent.h"
+
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Engine.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
-#include "GameFramework/GameStateBase.h"
+
 
 // Sets default values
 ASpaceship::ASpaceship()
@@ -17,10 +15,7 @@ ASpaceship::ASpaceship()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
-	MaxSpeed = 100000.f;
-	TurnSpeed = 80.f;
-	Acceleration = 6000;
-	MinSpeed = 0.f;
+	MovementComponent = CreateDefaultSubobject<USpaceshipMovementComponent>(TEXT("MovementComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -64,11 +59,12 @@ void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (MovementComponent == nullptr) return;
 
 	if (Role == ROLE_AutonomousProxy)
 	{
-		FSpaceshipMove Move = CreateMove(DeltaTime);
-		SimulateMove(Move);
+		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
+		MovementComponent->SimulateMove(Move);
 
 		UnacknowledgeMoves.Add(Move);
 		Server_SendMove(Move);
@@ -77,13 +73,13 @@ void ASpaceship::Tick(float DeltaTime)
 	// we are the server and in control of the pawn
 	if (Role == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy)
 	{
-		FSpaceshipMove Move = CreateMove(DeltaTime);
+		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
 		Server_SendMove(Move);
 	}
 
 	if (Role == ROLE_SimulatedProxy)
 	{
-		SimulateMove(ServerState.LastMove);
+		MovementComponent->SimulateMove(ServerState.LastMove);
 	}
 
 	FRotator Banana = GetActorRotation();// Debug console
@@ -113,94 +109,22 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 void ASpaceship::OnRep_ServerState()
 {
 	SetActorTransform(ServerState.Transform);
-	CurrentForwardSpeed = ServerState.CurrentForwardSpeed;
-	CurrentPitchSpeed = ServerState.CurrentPitchSpeed;
-	CurrentRollSpeed = ServerState.CurrentRollSpeed;
-	CurrentStrafeSpeed = ServerState.CurrentStrafeSpeed;
-	CurrentYawSpeed = ServerState.CurrentYawSpeed;
-	RollRoll = ServerState.RollRoll;
+	MovementComponent->SetCurrentForwardSpeed(ServerState.CurrentForwardSpeed);
+	MovementComponent->SetCurrentPitchSpeed(ServerState.CurrentPitchSpeed);
+	MovementComponent->SetCurrentRollSpeed(ServerState.CurrentRollSpeed);
+	MovementComponent->SetCurrentStrafeSpeed(ServerState.CurrentStrafeSpeed);
+	MovementComponent->SetCurrentYawSpeed(ServerState.CurrentYawSpeed);
+	MovementComponent->SetRollRoll(ServerState.RollRoll);
 
 	ClearAcknowledgeMoves(ServerState.LastMove);
 
 	for (const FSpaceshipMove& Move : UnacknowledgeMoves)
 	{
-		SimulateMove(Move);
+		MovementComponent->SimulateMove(Move);
 	}
 }
 
-FSpaceshipMove ASpaceship::CreateMove(float DeltaTime)
-{
-	FSpaceshipMove Move;
-	Move.DeltaTime = DeltaTime;
-	Move.Throttle = Throttle;
-	Move.PitchRotationRatio = PitchRotationRatio;
-	Move.RollRotationRatio = RollRotationRatio;
-	Move.YawRotationRatio = YawRotationRatio;
-	AGameStateBase* GameState = GetWorld()->GetGameState();
 
-	Move.Time = GameState->GetServerWorldTimeSeconds();
-	return Move;
-}
-
-void ASpaceship::SimulateMove(const FSpaceshipMove& Move)
-{
-	// TODO Refactoring
-	// Move forward tick
-	{
-		bool bHasInput = !FMath::IsNearlyEqual(Move.Throttle, 0.f);
-		float CurrentAcc = bHasInput ? (Move.Throttle * Acceleration) : (-0.2f * Acceleration);
-		float NewForwardSpeed = CurrentForwardSpeed + (GetWorld()->GetDeltaSeconds() * CurrentAcc);
-		CurrentForwardSpeed = FMath::Clamp(NewForwardSpeed, MinSpeed, MaxSpeed);
-		const FVector LocalMove = FVector(CurrentForwardSpeed * Move.DeltaTime, 0.f, 0.f);
-
-		// Move plan forwards (with sweep so we stop when we collide with things)
-		AddActorLocalOffset(LocalMove, true);
-	}
-	// Rotation Pitch tick
-	{
-		CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, Move.PitchRotationRatio * TurnSpeed*0.5, GetWorld()->GetDeltaSeconds(), 1.f);  // PitchRotationRatio * TurnSpeed;
-
-		FRotator rotationDelta(CurrentPitchSpeed * Move.DeltaTime, 0, 0);
-
-		FTransform NewTrasform = GetTransform();
-		NewTrasform.ConcatenateRotation(rotationDelta.Quaternion());
-		NewTrasform.NormalizeRotation();
-		SetActorTransform(NewTrasform);
-	}
-	// Rotation Yaw Tick
-	{
-		float Rotation = GetActorRotation().Roll;
-		bool bIsTurning = (FMath::Abs(Move.YawRotationRatio) > 0.2f) && (FMath::IsWithin(Rotation, -90.f, 90.f));
-		if (bIsTurning)
-		{
-			CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, Move.YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);//TurnSpeed * Val;
-		}
-		else
-		{
-			CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, GetActorRotation().Roll * -1.f, GetWorld()->GetDeltaSeconds(), 5.f);//GetActorRotation().Roll * -0.5;
-		}
-		CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, Move.YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f); //Val*TurnSpeed;
-
-		// Calculate change in rotation this frame
-		FRotator DeltaRotation(0, 0, 0);
-		DeltaRotation.Yaw = CurrentYawSpeed * Move.DeltaTime;
-
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotation.ToString());// Debug console
-
-		// Rotate plane
-		AddActorWorldRotation(FQuat(DeltaRotation), true);
-	}
-
-	// Rotation Roll Tick
-	{
-		RollRoll = FMath::FInterpTo(RollRoll, Move.RollRotationRatio * TurnSpeed * 3, GetWorld()->GetDeltaSeconds(), 1.f);
-		FRotator DeltaRotationRoll(0, 0, 0);
-		DeltaRotationRoll.Roll = (CurrentRollSpeed + RollRoll * 2)* Move.DeltaTime;
-		AddActorLocalRotation(FQuat(DeltaRotationRoll), true);
-
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());// Debug console
-	}
-}
 
 void ASpaceship::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
 {
@@ -220,79 +144,52 @@ void ASpaceship::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
 // Movement on client
 void ASpaceship::MoveForwardInput(float Val)
 {
-	Throttle = Val;
+	if (MovementComponent == nullptr) return;
+
+	MovementComponent->SetThrottle(Val);
 }
 
 void ASpaceship::MoveYawInput(float Val)
 {
-	RollRotationRatio = Val;
+	if (MovementComponent == nullptr) return;
+
+	MovementComponent->SetRollRotationRatio(Val);	
 }
 
 void ASpaceship::PitchCamera(float Val)
 {
-	PitchRotationRatio = Val;
-	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, PitchRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
+	if (MovementComponent == nullptr) return;
+
+	MovementComponent->SetPitchRotationRatio(Val);
+	CameraInput.Y = FMath::FInterpTo(CameraInput.Y, Val * MovementComponent->GetTurnSpeed(), GetWorld()->GetDeltaSeconds(), 1.f);
 }
 
 void ASpaceship::YawCamera(float Val)
 {
-	YawRotationRatio = Val;
-	CameraInput.X = FMath::FInterpTo(CameraInput.X, YawRotationRatio * TurnSpeed, GetWorld()->GetDeltaSeconds(), 1.f);
+	if (MovementComponent == nullptr) return;
+
+	MovementComponent->SetYawRotationRatio(Val);
+	CameraInput.X = FMath::FInterpTo(CameraInput.X, Val * MovementComponent->GetTurnSpeed(), GetWorld()->GetDeltaSeconds(), 1.f);
 }
 
 // Movement Server Implementation and validation. Validation is for anticheat
 void ASpaceship::Server_SendMove_Implementation(FSpaceshipMove Move)
 {
-	SimulateMove(Move);
+	if (MovementComponent == nullptr) return;
+
+	MovementComponent->SimulateMove(Move);
+
 	ServerState.LastMove = Move;
 	ServerState.Transform = GetActorTransform();
-	ServerState.CurrentForwardSpeed = CurrentForwardSpeed;
-	ServerState.CurrentPitchSpeed = CurrentPitchSpeed;
-	ServerState.CurrentRollSpeed = CurrentRollSpeed;
-	ServerState.CurrentStrafeSpeed = CurrentStrafeSpeed;
-	ServerState.CurrentYawSpeed = CurrentYawSpeed;
-	ServerState.RollRoll = RollRoll;	
+	ServerState.CurrentForwardSpeed = MovementComponent->GetCurrentForwardSpeed();
+	ServerState.CurrentPitchSpeed = MovementComponent->GetCurrentPitchSpeed();
+	ServerState.CurrentRollSpeed = MovementComponent->GetCurrentRollSpeed();
+	ServerState.CurrentStrafeSpeed = MovementComponent->GetCurrentStrafeSpeed();
+	ServerState.CurrentYawSpeed = MovementComponent->GetCurrentYawSpeed();
+	ServerState.RollRoll = MovementComponent->GetRollRoll();
 }
 
 bool ASpaceship::Server_SendMove_Validate(FSpaceshipMove Move)
 {
 	return true; //TODO make better validation
 }
-
-
-/*
-bool ASpaceship::Server_MoveForwardInput_Validate(float Val)
-{
-	return true;
-}
-
-void ASpaceship::Server_MoveYawInput_Implementation(float Val)
-{
-	RollRotationRatio = Val;
-}
-
-bool ASpaceship::Server_MoveYawInput_Validate(float Val)
-{
-	return true;
-}
-
-void ASpaceship::Server_PitchCamera_Implementation(float Val)
-{
-	PitchRotationRatio = Val;
-}
-
-bool ASpaceship::Server_PitchCamera_Validate(float Val)
-{
-	return true;
-}
-
-void ASpaceship::Server_YawCamera_Implementation(float Val)
-{
-	YawRotationRatio = Val;	
-}
-
-bool ASpaceship::Server_YawCamera_Validate(float Val)
-{
-	return true;
-}
-*/

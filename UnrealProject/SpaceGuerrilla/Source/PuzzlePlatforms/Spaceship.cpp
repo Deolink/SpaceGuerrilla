@@ -5,7 +5,7 @@
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-#include "UnrealNetwork.h"
+
 
 
 // Sets default values
@@ -16,6 +16,7 @@ ASpaceship::ASpaceship()
 	bReplicates = true;
 
 	MovementComponent = CreateDefaultSubobject<USpaceshipMovementComponent>(TEXT("MovementComponent"));
+	MovementReplicator = CreateDefaultSubobject<USpaceshipMovementReplicator>(TEXT("MovementReplicator"));
 }
 
 // Called when the game starts or when spawned
@@ -30,11 +31,7 @@ void ASpaceship::BeginPlay()
 }
 
 // Variables to replicate
-void ASpaceship::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ASpaceship, ServerState);
-}
+
 
 //Function to get the role in string to debug
 FString GetEnumText(ENetRole Role)
@@ -59,29 +56,7 @@ void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (MovementComponent == nullptr) return;
-
-	if (Role == ROLE_AutonomousProxy)
-	{
-		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
-		MovementComponent->SimulateMove(Move);
-
-		UnacknowledgeMoves.Add(Move);
-		Server_SendMove(Move);
-	}
-
-	// we are the server and in control of the pawn
-	if (Role == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy)
-	{
-		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
-		Server_SendMove(Move);
-	}
-
-	if (Role == ROLE_SimulatedProxy)
-	{
-		MovementComponent->SimulateMove(ServerState.LastMove);
-	}
-
+	
 	FRotator Banana = GetActorRotation();// Debug console
 	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
 
@@ -105,41 +80,6 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	//InputComponent->BindAction("Fire", IE_Pressed, this, &ASpaceship::OnFire);
 }
 
-// Replicated function called when the variable replicated changes
-void ASpaceship::OnRep_ServerState()
-{
-	SetActorTransform(ServerState.Transform);
-	MovementComponent->SetCurrentForwardSpeed(ServerState.CurrentForwardSpeed);
-	MovementComponent->SetCurrentPitchSpeed(ServerState.CurrentPitchSpeed);
-	MovementComponent->SetCurrentRollSpeed(ServerState.CurrentRollSpeed);
-	MovementComponent->SetCurrentStrafeSpeed(ServerState.CurrentStrafeSpeed);
-	MovementComponent->SetCurrentYawSpeed(ServerState.CurrentYawSpeed);
-	MovementComponent->SetRollRoll(ServerState.RollRoll);
-
-	ClearAcknowledgeMoves(ServerState.LastMove);
-
-	for (const FSpaceshipMove& Move : UnacknowledgeMoves)
-	{
-		MovementComponent->SimulateMove(Move);
-	}
-}
-
-
-
-void ASpaceship::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
-{
-	TArray<FSpaceshipMove> NewMoves;
-
-	for (const FSpaceshipMove& Move : UnacknowledgeMoves)
-	{
-		if (Move.Time > LastMove.Time)
-		{
-			NewMoves.Add(Move);
-		}
-	}
-
-	UnacknowledgeMoves = NewMoves;
-}
 
 // Movement on client
 void ASpaceship::MoveForwardInput(float Val)
@@ -172,24 +112,3 @@ void ASpaceship::YawCamera(float Val)
 	CameraInput.X = FMath::FInterpTo(CameraInput.X, Val * MovementComponent->GetTurnSpeed(), GetWorld()->GetDeltaSeconds(), 1.f);
 }
 
-// Movement Server Implementation and validation. Validation is for anticheat
-void ASpaceship::Server_SendMove_Implementation(FSpaceshipMove Move)
-{
-	if (MovementComponent == nullptr) return;
-
-	MovementComponent->SimulateMove(Move);
-
-	ServerState.LastMove = Move;
-	ServerState.Transform = GetActorTransform();
-	ServerState.CurrentForwardSpeed = MovementComponent->GetCurrentForwardSpeed();
-	ServerState.CurrentPitchSpeed = MovementComponent->GetCurrentPitchSpeed();
-	ServerState.CurrentRollSpeed = MovementComponent->GetCurrentRollSpeed();
-	ServerState.CurrentStrafeSpeed = MovementComponent->GetCurrentStrafeSpeed();
-	ServerState.CurrentYawSpeed = MovementComponent->GetCurrentYawSpeed();
-	ServerState.RollRoll = MovementComponent->GetRollRoll();
-}
-
-bool ASpaceship::Server_SendMove_Validate(FSpaceshipMove Move)
-{
-	return true; //TODO make better validation
-}

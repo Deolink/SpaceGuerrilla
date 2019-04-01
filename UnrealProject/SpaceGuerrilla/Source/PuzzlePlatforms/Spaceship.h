@@ -5,39 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "SpaceshipMovementComponent.h"
+#include "SpaceshipMovementReplicator.h"
 #include "Spaceship.generated.h"
 
 
-
-USTRUCT()
-struct FSpaceshipState
-{
-	GENERATED_USTRUCT_BODY()
-
-	UPROPERTY()
-	float CurrentYawSpeed;
-
-	UPROPERTY()
-	float CurrentPitchSpeed;
-
-	UPROPERTY()
-	float CurrentRollSpeed;
-
-	UPROPERTY()
-	float CurrentStrafeSpeed;
-
-	UPROPERTY()
-	float RollRoll;
-
-	UPROPERTY()
-	float CurrentForwardSpeed;
-
-	UPROPERTY()
-	FTransform Transform;
-
-	UPROPERTY()
-	FSpaceshipMove LastMove;
-};
 
 
 UCLASS()
@@ -73,29 +44,6 @@ public:
 	void PitchCamera(float Val);
 	void YawCamera(float Val);
 
-	//Server input implementation
-	//Input functions trasferiti in controller
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_SendMove(FSpaceshipMove Move);
-
-	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//void Server_MoveForwardInput(float Val);
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//void Server_MoveYawInput(float Val);
-	
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//void Server_PitchCamera(float Val);
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//void Server_YawCamera(float Val);
-
-	//UPROPERTY(EditAnywhere, Category = "Movement")
-	//float PitchValue;
-
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float YawValue;
 
@@ -108,18 +56,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	FVector MuzzleOffset;
 
-	// ServerState
-	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
-	FSpaceshipState ServerState;
-
-	TArray<FSpaceshipMove> UnacknowledgeMoves;
+	
 
 	// Components
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	USpaceshipMovementComponent* MovementComponent;
 
-	// Function to call when replicated transform changes
-	UFUNCTION()
-	void OnRep_ServerState();
+	UPROPERTY(VisibleAnywhere)
+	USpaceshipMovementReplicator* MovementReplicator;
+
+	
 	
 };

@@ -60,6 +60,8 @@ private:
 
 	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
 	
+	void UpdateServerState(const FSpaceshipMove& Move);
+
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FSpaceshipMove Move);
 

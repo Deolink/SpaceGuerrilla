@@ -31,20 +31,20 @@ void USpaceshipMovementReplicator::TickComponent(float DeltaTime, ELevelTick Tic
 
 	if (MovementComponent == nullptr) return;
 
+	FSpaceshipMove LastMove = MovementComponent->GetLastMove();
+
 	if (GetOwnerRole() == ROLE_AutonomousProxy)
 	{
-		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
-		MovementComponent->SimulateMove(Move);
+		
 
-		UnacknowledgeMoves.Add(Move);
-		Server_SendMove(Move);
+		UnacknowledgeMoves.Add(LastMove);
+		Server_SendMove(LastMove);
 	}
 
 	// we are the server and in control of the pawn
-	if (GetOwnerRole() == ROLE_Authority && GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
+	if (GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
 	{
-		FSpaceshipMove Move = MovementComponent->CreateMove(DeltaTime);
-		Server_SendMove(Move);
+		UpdateServerState(LastMove);
 	}
 
 	if (GetOwnerRole() == ROLE_SimulatedProxy)
@@ -52,6 +52,18 @@ void USpaceshipMovementReplicator::TickComponent(float DeltaTime, ELevelTick Tic
 		MovementComponent->SimulateMove(ServerState.LastMove);
 	}
 
+}
+
+void USpaceshipMovementReplicator::UpdateServerState(const FSpaceshipMove& Move)
+{
+	ServerState.LastMove = Move;
+	ServerState.Transform = GetOwner()->GetActorTransform();
+	ServerState.CurrentForwardSpeed = MovementComponent->GetCurrentForwardSpeed();
+	ServerState.CurrentPitchSpeed = MovementComponent->GetCurrentPitchSpeed();
+	ServerState.CurrentRollSpeed = MovementComponent->GetCurrentRollSpeed();
+	ServerState.CurrentStrafeSpeed = MovementComponent->GetCurrentStrafeSpeed();
+	ServerState.CurrentYawSpeed = MovementComponent->GetCurrentYawSpeed();
+	ServerState.RollRoll = MovementComponent->GetRollRoll();
 }
 
 void USpaceshipMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -63,6 +75,8 @@ void USpaceshipMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeP
 // Replicated function called when the variable replicated changes
 void USpaceshipMovementReplicator::OnRep_ServerState()
 {
+	if (MovementComponent == nullptr) return;
+
 	GetOwner()->SetActorTransform(ServerState.Transform);
 	MovementComponent->SetCurrentForwardSpeed(ServerState.CurrentForwardSpeed);
 	MovementComponent->SetCurrentPitchSpeed(ServerState.CurrentPitchSpeed);
@@ -101,14 +115,7 @@ void USpaceshipMovementReplicator::Server_SendMove_Implementation(FSpaceshipMove
 
 	MovementComponent->SimulateMove(Move);
 
-	ServerState.LastMove = Move;
-	ServerState.Transform = GetOwner()->GetActorTransform();
-	ServerState.CurrentForwardSpeed = MovementComponent->GetCurrentForwardSpeed();
-	ServerState.CurrentPitchSpeed = MovementComponent->GetCurrentPitchSpeed();
-	ServerState.CurrentRollSpeed = MovementComponent->GetCurrentRollSpeed();
-	ServerState.CurrentStrafeSpeed = MovementComponent->GetCurrentStrafeSpeed();
-	ServerState.CurrentYawSpeed = MovementComponent->GetCurrentYawSpeed();
-	ServerState.RollRoll = MovementComponent->GetRollRoll();
+	UpdateServerState(Move);
 }
 
 bool USpaceshipMovementReplicator::Server_SendMove_Validate(FSpaceshipMove Move)

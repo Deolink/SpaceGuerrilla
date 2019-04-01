@@ -33,8 +33,12 @@ void USpaceshipMovementComponent::BeginPlay()
 void USpaceshipMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
+	// So we can move in a single player scenario, decoupling the movement component and the replicator
+	if(GetOwnerRole() == ROLE_AutonomousProxy || GetOwner()->GetRemoteRole() == ROLE_SimulatedProxy)
+	{
+		LastMove = CreateMove(DeltaTime);
+		SimulateMove(LastMove);
+	}	
 }
 
 FSpaceshipMove USpaceshipMovementComponent::CreateMove(float DeltaTime)

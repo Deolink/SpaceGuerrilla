@@ -47,14 +47,14 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	FSpaceshipMove CreateMove(float DeltaTime);
+	
 
 	void SimulateMove(const FSpaceshipMove& Move);
 
+	FSpaceshipMove GetLastMove() { return LastMove; }
+
 	////////// Getting FIXED Variables
 	float GetTurnSpeed() { return TurnSpeed; };
-
-
 
 	///////// Setting and Getting NON fixed variables
 	float GetCurrentYawSpeed() { return CurrentYawSpeed; };
@@ -81,7 +81,10 @@ public:
 	void SetYawRotationRatio(float Val) { YawRotationRatio = Val; };
 	void SetRollRotationRatio(float Val) { RollRotationRatio = Val; };
 
-private:	
+private:
+
+	FSpaceshipMove CreateMove(float DeltaTime);
+
 	/////////////////////////////** Fixed variables **/////////////////////////////////////
 
 	// Movement 
@@ -124,4 +127,6 @@ private:
 	float PitchRotationRatio;
 	float YawRotationRatio;
 	float RollRotationRatio;
+
+	FSpaceshipMove LastMove;
 };

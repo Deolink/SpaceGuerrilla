@@ -57,10 +57,10 @@ void ASpaceship::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	
-	FRotator Banana = GetActorRotation();// Debug console
-	UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
+	//FRotator Banana = GetActorRotation();// Debug console
+	//UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console
 
-	UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());// Debug console
+	//UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());// Debug console
 
 	// Getting the Role and showing it above the actor
 	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumText(Role), this, FColor::White, DeltaTime);

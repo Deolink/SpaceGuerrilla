@@ -61,6 +61,8 @@ private:
 	void ClearAcknowledgeMoves(FSpaceshipMove LastMove);
 	
 	void UpdateServerState(const FSpaceshipMove& Move);
+	void ClientTick(float DeltaTime);
+
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FSpaceshipMove Move);
@@ -71,10 +73,14 @@ private:
 
 	TArray<FSpaceshipMove> UnacknowledgeMoves;
 
+	float ClientTimeSinceUpdate;
+	float ClientTimeBetweenUpdates;
+	FVector ClientStartLocation;
+
 	// Function to call when replicated transform changes
 	UFUNCTION()
 	void OnRep_ServerState();
 
-
-
+	void SimulatedProxy_OnRep_ServerState();
+	void AutonomousProxy_OnRep_ServerState();
 };

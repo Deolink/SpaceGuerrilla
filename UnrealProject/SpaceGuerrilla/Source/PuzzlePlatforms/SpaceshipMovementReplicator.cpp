@@ -49,7 +49,7 @@ void USpaceshipMovementReplicator::TickComponent(float DeltaTime, ELevelTick Tic
 
 	if (GetOwnerRole() == ROLE_SimulatedProxy)
 	{
-		MovementComponent->SimulateMove(ServerState.LastMove);
+		ClientTick(DeltaTime);
 	}
 
 }
@@ -66,6 +66,21 @@ void USpaceshipMovementReplicator::UpdateServerState(const FSpaceshipMove& Move)
 	ServerState.RollRoll = MovementComponent->GetRollRoll();
 }
 
+void USpaceshipMovementReplicator::ClientTick(float DeltaTime)
+{
+	ClientTimeSinceUpdate += DeltaTime;
+
+	if (ClientTimeBetweenUpdates < KINDA_SMALL_NUMBER) return;
+
+	FVector TargetLocation = ServerState.Transform.GetLocation();
+	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenUpdates;
+	FVector StartLocation = ClientStartLocation;
+
+	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
+
+	GetOwner()->SetActorLocation(NewLocation);
+}
+
 void USpaceshipMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -74,6 +89,21 @@ void USpaceshipMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeP
 
 // Replicated function called when the variable replicated changes
 void USpaceshipMovementReplicator::OnRep_ServerState()
+{
+	switch (GetOwnerRole())
+	{
+	case ROLE_AutonomousProxy:
+		AutonomousProxy_OnRep_ServerState();
+		break;
+	case ROLE_SimulatedProxy:
+		SimulatedProxy_OnRep_ServerState();
+		break;
+	default:
+		break;
+	}
+}
+
+void USpaceshipMovementReplicator::AutonomousProxy_OnRep_ServerState()
 {
 	if (MovementComponent == nullptr) return;
 
@@ -92,6 +122,16 @@ void USpaceshipMovementReplicator::OnRep_ServerState()
 		MovementComponent->SimulateMove(Move);
 	}
 }
+
+void USpaceshipMovementReplicator::SimulatedProxy_OnRep_ServerState()
+{
+	ClientTimeBetweenUpdates = ClientTimeSinceUpdate;
+	ClientTimeSinceUpdate = 0;
+
+	ClientStartLocation = GetOwner()->GetActorLocation();
+}
+
+
 
 void USpaceshipMovementReplicator::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
 {

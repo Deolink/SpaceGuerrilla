@@ -1,12 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Spaceship.h"
-
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-
-
 
 // Sets default values
 ASpaceship::ASpaceship()
@@ -14,6 +11,7 @@ ASpaceship::ASpaceship()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	bReplicateMovement = false;
 
 	MovementComponent = CreateDefaultSubobject<USpaceshipMovementComponent>(TEXT("MovementComponent"));
 	MovementReplicator = CreateDefaultSubobject<USpaceshipMovementReplicator>(TEXT("MovementReplicator"));
@@ -29,9 +27,6 @@ void ASpaceship::BeginPlay()
 		NetUpdateFrequency = 1;
 	}
 }
-
-// Variables to replicate
-
 
 //Function to get the role in string to debug
 FString GetEnumText(ENetRole Role)
@@ -55,7 +50,6 @@ FString GetEnumText(ENetRole Role)
 void ASpaceship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 	
 	//FRotator Banana = GetActorRotation();// Debug console
 	//UE_LOG(LogTemp, Warning, TEXT("BANANA: %s"), *Banana.ToString()); // Debug console

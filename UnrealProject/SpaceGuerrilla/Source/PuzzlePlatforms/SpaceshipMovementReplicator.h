@@ -75,7 +75,7 @@ private:
 
 	float ClientTimeSinceUpdate;
 	float ClientTimeBetweenUpdates;
-	FVector ClientStartLocation;
+	FTransform ClientStartTransform;
 
 	// Function to call when replicated transform changes
 	UFUNCTION()

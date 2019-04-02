@@ -8,6 +8,14 @@
 void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
+	if (NewPlayer->IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Is locally controlled"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Is NOT locally controlled"));
+	}
 	++NumberOfPlayers;
 	if (NumberOfPlayers >= 2)
 	{

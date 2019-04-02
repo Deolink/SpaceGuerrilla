@@ -19,8 +19,7 @@ void USpaceshipMovementReplicator::BeginPlay()
 {
 	Super::BeginPlay();
 
-	MovementComponent = GetOwner()->FindComponentByClass<USpaceshipMovementComponent>();
-	
+	MovementComponent = GetOwner()->FindComponentByClass<USpaceshipMovementComponent>();	
 }
 
 
@@ -35,8 +34,6 @@ void USpaceshipMovementReplicator::TickComponent(float DeltaTime, ELevelTick Tic
 
 	if (GetOwnerRole() == ROLE_AutonomousProxy)
 	{
-		
-
 		UnacknowledgeMoves.Add(LastMove);
 		Server_SendMove(LastMove);
 	}
@@ -71,14 +68,17 @@ void USpaceshipMovementReplicator::ClientTick(float DeltaTime)
 	ClientTimeSinceUpdate += DeltaTime;
 
 	if (ClientTimeBetweenUpdates < KINDA_SMALL_NUMBER) return;
+	if (MovementComponent == nullptr) return;
 
 	FVector TargetLocation = ServerState.Transform.GetLocation();
 	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenUpdates;
 	FVector StartLocation = ClientStartTransform.GetLocation();
 
 	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
-
+	// test
+	
 	GetOwner()->SetActorLocation(NewLocation);
+
 
 	FQuat TargetRotation = ServerState.Transform.GetRotation();
 	FQuat StartRotation = ClientStartTransform.GetRotation();
@@ -132,10 +132,13 @@ void USpaceshipMovementReplicator::AutonomousProxy_OnRep_ServerState()
 
 void USpaceshipMovementReplicator::SimulatedProxy_OnRep_ServerState()
 {
+	if (MovementComponent == nullptr) return;
+
 	ClientTimeBetweenUpdates = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0;
 
 	ClientStartTransform = GetOwner()->GetActorTransform();
+	
 }
 
 

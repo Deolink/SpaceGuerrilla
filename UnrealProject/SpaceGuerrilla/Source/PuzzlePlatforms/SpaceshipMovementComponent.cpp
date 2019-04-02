@@ -98,7 +98,7 @@ void USpaceshipMovementComponent::SimulateMove(const FSpaceshipMove& Move)
 		FRotator DeltaRotation(0, 0, 0);
 		DeltaRotation.Yaw = CurrentYawSpeed * Move.DeltaTime;
 
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotation.ToString());// Debug console
+		//UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotation.ToString());// Debug console
 
 		// Rotate plane
 		GetOwner()->AddActorWorldRotation(FQuat(DeltaRotation), true);
@@ -111,6 +111,6 @@ void USpaceshipMovementComponent::SimulateMove(const FSpaceshipMove& Move)
 		DeltaRotationRoll.Roll = (CurrentRollSpeed + RollRoll * 2)* Move.DeltaTime;
 		GetOwner()->AddActorLocalRotation(FQuat(DeltaRotationRoll), true);
 
-		UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());// Debug console
+		//UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *DeltaRotationRoll.ToString());// Debug console
 	}
 }

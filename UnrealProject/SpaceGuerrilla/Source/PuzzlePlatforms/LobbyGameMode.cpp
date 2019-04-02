@@ -9,9 +9,9 @@ void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 	++NumberOfPlayers;
-	if (NumberOfPlayers >= 3)
+	if (NumberOfPlayers >= 2)
 	{
-		GetWorldTimerManager().SetTimer(GameStartTimer, this, &ALobbyGameMode::StartGame, 5.0);
+		GetWorldTimerManager().SetTimer(GameStartTimer, this, &ALobbyGameMode::StartGame, 3.0);
 	}
 }
 
@@ -34,6 +34,6 @@ void ALobbyGameMode::StartGame()
 
 	bUseSeamlessTravel = true;
 
-	World->ServerTravel("/Game/PuzzlePlatforms/Maps/Game?listen");
+	World->ServerTravel("/Game/PuzzlePlatforms/Maps/SpaceGuerrilla?listen");
 
 }

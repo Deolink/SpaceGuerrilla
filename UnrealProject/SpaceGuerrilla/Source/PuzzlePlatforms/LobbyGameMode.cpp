@@ -4,31 +4,24 @@
 #include "Engine/World.h"
 #include "Public/TimerManager.h"
 #include "PuzzlePlatformsGameInstance.h"
-
+// called after a succesfull log in, we check the number of players and then travel after some time
 void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-	if (NewPlayer->IsLocalController())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Is locally controlled"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Is NOT locally controlled"));
-	}
+	
 	++NumberOfPlayers;
 	if (NumberOfPlayers >= 2)
 	{
 		GetWorldTimerManager().SetTimer(GameStartTimer, this, &ALobbyGameMode::StartGame, 3.0);
 	}
 }
-
+// when logout we change the number of players that are online
 void ALobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 	--NumberOfPlayers;
 }
-
+// we travel to the level and start the game through the game instance session
 void ALobbyGameMode::StartGame()
 {
 	auto GameInstance = Cast<UPuzzlePlatformsGameInstance>(GetGameInstance());

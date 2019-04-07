@@ -9,7 +9,7 @@
 
 
 USTRUCT()
-struct FSpaceshipState
+struct FSpaceshipState // Variables that change and need to be checked, based on Alessio movement
 {
 	GENERATED_USTRUCT_BODY()
 

@@ -4,6 +4,7 @@
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/Controller.h"
 
 // Sets default values
 ASpaceship::ASpaceship()
@@ -21,7 +22,7 @@ ASpaceship::ASpaceship()
 void ASpaceship::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	if (HasAuthority())
 	{
 		NetUpdateFrequency = 1;
@@ -29,7 +30,7 @@ void ASpaceship::BeginPlay()
 }
 
 //Function to get the role in string to debug
-FString GetEnumText(ENetRole Role)
+FString GetEnumNetRoleText(ENetRole Role)
 {
 	switch (Role)
 	{
@@ -46,6 +47,28 @@ FString GetEnumText(ENetRole Role)
 	}
 }
 
+//Function to get the role in string to debug
+FString GetEnumNetModeText(ENetMode Role)
+{
+
+	switch (Role)
+	{
+	case NM_Standalone:
+		return "Standalone";
+	case NM_DedicatedServer:
+		return "DedicatedServer";
+	case NM_ListenServer:
+		return "ListenServer";
+	case NM_Client:
+		return "Client";
+	case NM_MAX:
+		return "MAX";
+	default:
+		return "ERROR";
+	}
+}
+
+
 // Called every frame
 void ASpaceship::Tick(float DeltaTime)
 {
@@ -56,8 +79,10 @@ void ASpaceship::Tick(float DeltaTime)
 
 	//UE_LOG(LogTemp, Warning, TEXT("Rotazione: %s"), *CameraInput.ToString());// Debug console
 
-	// Getting the Role and showing it above the actor
-	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumText(Role), this, FColor::White, DeltaTime);
+	// Getting the Role and showing it above the actor for debug	
+	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumNetRoleText(Role), this, FColor::White, DeltaTime);
+	DrawDebugString(GetWorld(), FVector(0, 0, 150), GetEnumNetRoleText(GetRemoteRole()), this, FColor::White, DeltaTime);
+	DrawDebugString(GetWorld(), FVector(0, 0, 200), GetEnumNetModeText(GetNetMode()), this, FColor::White, DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -75,7 +100,7 @@ void ASpaceship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 }
 
 
-// Movement on client
+// Movement on client // 
 void ASpaceship::MoveForwardInput(float Val)
 {
 	if (MovementComponent == nullptr) return;
@@ -105,4 +130,4 @@ void ASpaceship::YawCamera(float Val)
 	MovementComponent->SetYawRotationRatio(Val);
 	CameraInput.X = FMath::FInterpTo(CameraInput.X, Val * MovementComponent->GetTurnSpeed(), GetWorld()->GetDeltaSeconds(), 1.f);
 }
-
+// end of movement //

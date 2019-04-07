@@ -44,6 +44,7 @@ public:
 	void PitchCamera(float Val);
 	void YawCamera(float Val);
 
+	// Not used variables
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float YawValue;
 
@@ -54,9 +55,7 @@ public:
 	float Boost;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	FVector MuzzleOffset;
-
-	
+	FVector MuzzleOffset;	
 
 	// Components
 	UPROPERTY(VisibleAnywhere)
@@ -65,6 +64,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	USpaceshipMovementReplicator* MovementReplicator;
 
+	
 	
 	
 };

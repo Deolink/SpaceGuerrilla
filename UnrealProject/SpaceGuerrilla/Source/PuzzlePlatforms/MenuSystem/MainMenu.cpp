@@ -23,25 +23,19 @@ bool UMainMenu::Initialize()
 {
 	bool Success = Super::Initialize();
 	if (!Success) return false;
-	
+	// Setting Buttons functions
 	if (!ensure(HostButton != nullptr)) return false;
 	HostButton->OnClicked.AddDynamic(this, &UMainMenu::OpenHostMenu);
-
 	if (!ensure(CancelHostMenuButton != nullptr)) return false;
 	CancelHostMenuButton->OnClicked.AddDynamic(this, &UMainMenu::OpenMainMenu);
-
 	if (!ensure(ConfirmHostMenuButton != nullptr)) return false;
 	ConfirmHostMenuButton->OnClicked.AddDynamic(this, &UMainMenu::HostServer);
-
 	if (!ensure(JoinButton != nullptr)) return false;
 	JoinButton->OnClicked.AddDynamic(this, &UMainMenu::OpenJoinMenu);
-
 	if (!ensure(QuitButton != nullptr)) return false;
 	QuitButton->OnClicked.AddDynamic(this, &UMainMenu::QuitPressed);
-
 	if (!ensure(CancelJoinMenuButton != nullptr)) return false;
 	CancelJoinMenuButton->OnClicked.AddDynamic(this, &UMainMenu::OpenMainMenu);
-
 	if (!ensure(ConfirmJoinMenuButton != nullptr)) return false;
 	ConfirmJoinMenuButton->OnClicked.AddDynamic(this, &UMainMenu::JoinServer);
 
@@ -61,42 +55,39 @@ void UMainMenu::HostServer()
 		MenuInterface->Host(ServerName);
 	}
 }
-
+// Showing the server list on screen
 void UMainMenu::SetServerList(const TArray<FServerData> ServerNames)
 {
-
-
 	UWorld* World = this->GetWorld();
 	if (!ensure(World != nullptr)) return;
 	
+	// we clear all the lines created under the server list
 	ServerList->ClearChildren();
 
 	uint32 i = 0;
 	for (const FServerData& ServerData : ServerNames)
 	{
-
+		// we create the new server row
 		UServerRow* Row = CreateWidget<UServerRow>(World, ServerRowClass);
 		if (!ensure(Row != nullptr)) return;
-
+		// set the row text
 		Row->ServerName->SetText(FText::FromString(ServerData.Name));
 		Row->HostUser->SetText(FText::FromString(ServerData.HostUsername));
 		FString FractionText = FString::Printf(TEXT("%d / %d"), ServerData.CurrrentPlayers, ServerData.MaxPlayers);
 		Row->ConnectionFraction->SetText(FText::FromString(FractionText));
 		Row->Setup(this, i);
 		++i;
-
+		// we add the row and show it
 		ServerList->AddChild(Row);
 	}
-
-
 }
-
+// select on screen the server row
 void UMainMenu::SelectIndex(uint32 Index)
 {
 	SelectedIndex = Index;
 	UpdateChildren();
 }
-
+// we show that we selected the children (check blueprint)
 void UMainMenu::UpdateChildren()
 {
 	for (int32 i = 0; i < ServerList->GetChildrenCount(); ++i)
@@ -104,7 +95,6 @@ void UMainMenu::UpdateChildren()
 		auto Row = Cast<UServerRow>(ServerList->GetChildAt(i));
 		if (Row != nullptr)
 		{
-
 			Row->Selected = (SelectedIndex.IsSet() &&SelectedIndex.GetValue() == i);
 		}
 	}

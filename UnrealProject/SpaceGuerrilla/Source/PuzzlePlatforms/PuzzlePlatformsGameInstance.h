@@ -19,10 +19,12 @@ class PUZZLEPLATFORMS_API UPuzzlePlatformsGameInstance : public UGameInstance, p
 	GENERATED_BODY()
 
 public:
+	// Constructors and initializers //
 	UPuzzlePlatformsGameInstance(const FObjectInitializer & ObjectInitializer);
 
 	virtual void Init();
 
+	// Menu //
 	UFUNCTION(BlueprintCallable)
 	void LoadMenuWidget();
 
@@ -35,26 +37,35 @@ public:
 	UFUNCTION(Exec)
 	void Join(uint32 Index) override;
 
-	void StartSession();
-
 	virtual void LoadMainMenu() override;
+
+	// Game session //
+	void StartSession();	
 
 	virtual void RefreshingServerList() override;
 
 private:
+	// VARIABLES //
+	// widget //
+
 	TSubclassOf<class UUserWidget> MenuClass;
 	TSubclassOf<class UUserWidget> InGameMenuClass;
 
 	class UMainMenu* Menu;
 
+	// Game session //
+
 	IOnlineSessionPtr SessionInterface;
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
-
+	
+	// FUNCTIONS //
+	// Delegates //
 	void OnCreateSessionComplete(FName SessionName, bool Success);
 	void OnDestroySessionComplete(FName SessionName, bool Success);
 	void OnFindSessionsComplete(bool Success);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
+	// Game session //
 	FString DesiredServerName;
 	void CreateSession();
 };

@@ -35,6 +35,8 @@ protected:
 	virtual bool Initialize();
 
 private:
+	// Variables //
+
 	TSubclassOf<class UUserWidget> ServerRowClass;
 
 	UPROPERTY(meta = (BindWidget))
@@ -75,6 +77,8 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class UPanelWidget* ServerList;
+
+	// Functions //
 
 	UFUNCTION()
 	void HostServer();

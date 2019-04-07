@@ -17,11 +17,14 @@ class PUZZLEPLATFORMS_API UMenuWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	// Functions //
+
 	void Setup();
 	void Teardown();
-
 	void SetMenuInterface(IMenuInterface* MenuInterface);
 
 protected:
+	// Functions //
+
 	IMenuInterface* MenuInterface;
 };

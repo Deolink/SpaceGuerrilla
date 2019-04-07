@@ -43,6 +43,7 @@ void USpaceshipMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 
 FSpaceshipMove USpaceshipMovementComponent::CreateMove(float DeltaTime)
 {
+	// Setting movement variables from the input that our spaceship receive
 	FSpaceshipMove Move;
 	Move.DeltaTime = DeltaTime;
 	Move.Throttle = Throttle;
@@ -50,13 +51,15 @@ FSpaceshipMove USpaceshipMovementComponent::CreateMove(float DeltaTime)
 	Move.RollRotationRatio = RollRotationRatio;
 	Move.YawRotationRatio = YawRotationRatio;
 	AGameStateBase* GameState = GetWorld()->GetGameState();
-
 	Move.Time = GameState->GetServerWorldTimeSeconds();
+	// return the move updated
 	return Move;
 }
 
+// We simulate the move we receive in the parameter
 void USpaceshipMovementComponent::SimulateMove(const FSpaceshipMove& Move)
 {
+	// Alessio's movement
 	// TODO Refactoring
 	// Move forward tick
 	{

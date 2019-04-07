@@ -15,13 +15,18 @@ class PUZZLEPLATFORMS_API ALobbyGameMode : public APuzzlePlatformsGameMode
 	GENERATED_BODY()
 
 public:
+	// Functions //
+
 	void PostLogin(APlayerController* NewPlayer) override;
 
 	void Logout(AController* Exiting) override;
 
 private:
+	// Functions //
 
 	void StartGame();
+
+	// Variables //
 
 	uint32 NumberOfPlayers = 0;
 

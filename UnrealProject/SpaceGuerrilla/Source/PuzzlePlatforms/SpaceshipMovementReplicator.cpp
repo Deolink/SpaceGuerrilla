@@ -53,6 +53,7 @@ void USpaceshipMovementReplicator::TickComponent(float DeltaTime, ELevelTick Tic
 
 void USpaceshipMovementReplicator::UpdateServerState(const FSpaceshipMove& Move)
 {
+	// Updating the variables in the server
 	ServerState.LastMove = Move;
 	ServerState.Transform = GetOwner()->GetActorTransform();
 	ServerState.CurrentForwardSpeed = MovementComponent->GetCurrentForwardSpeed();
@@ -70,21 +71,17 @@ void USpaceshipMovementReplicator::ClientTick(float DeltaTime)
 	if (ClientTimeBetweenUpdates < KINDA_SMALL_NUMBER) return;
 	if (MovementComponent == nullptr) return;
 
+	// interpolating the location
 	FVector TargetLocation = ServerState.Transform.GetLocation();
 	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenUpdates;
 	FVector StartLocation = ClientStartTransform.GetLocation();
-
-	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
-	// test
-	
+	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);	
 	GetOwner()->SetActorLocation(NewLocation);
 
-
+	// interpolating the rotation
 	FQuat TargetRotation = ServerState.Transform.GetRotation();
 	FQuat StartRotation = ClientStartTransform.GetRotation();
-
 	FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, LerpRatio);
-
 	GetOwner()->SetActorRotation(NewRotation);
 }
 
@@ -109,11 +106,11 @@ void USpaceshipMovementReplicator::OnRep_ServerState()
 		break;
 	}
 }
-
+// Need to change cause of the logic role changed in the new versions of Unreal
 void USpaceshipMovementReplicator::AutonomousProxy_OnRep_ServerState()
 {
 	if (MovementComponent == nullptr) return;
-
+	
 	GetOwner()->SetActorTransform(ServerState.Transform);
 	MovementComponent->SetCurrentForwardSpeed(ServerState.CurrentForwardSpeed);
 	MovementComponent->SetCurrentPitchSpeed(ServerState.CurrentPitchSpeed);
@@ -137,11 +134,8 @@ void USpaceshipMovementReplicator::SimulatedProxy_OnRep_ServerState()
 	ClientTimeBetweenUpdates = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0;
 
-	ClientStartTransform = GetOwner()->GetActorTransform();
-	
+	ClientStartTransform = GetOwner()->GetActorTransform();	
 }
-
-
 
 void USpaceshipMovementReplicator::ClearAcknowledgeMoves(FSpaceshipMove LastMove)
 {

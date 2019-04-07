@@ -7,7 +7,7 @@
 #include "SpaceshipMovementComponent.generated.h"
 
 USTRUCT()
-struct FSpaceshipMove
+struct FSpaceshipMove // Struct with the variables of the move of a spaceship
 {
 	GENERATED_USTRUCT_BODY()
 
